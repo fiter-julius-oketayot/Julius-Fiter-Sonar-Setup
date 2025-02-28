@@ -48,10 +48,10 @@ jobs:
           task_id=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/ce/task?id=$(grep -oP '(?<=ceTaskId=)[^ ]+' build.log)" | jq -r .task.id)
           status=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?analysisId=$task_id" | jq -r .projectStatus.status)
           if [ "$status" != "OK" ]; then
-            echo "SonarCloud Quality Gate failed"
+            echo "Sonar Cloud Quality Gate failed"
             reportUrl="https://sonarcloud.io/dashboard?id=your_project_key"
             echo "View the SonarCloud report at: $reportUrl"
             exit 1
           else
-            echo "SonarCloud Quality Gate passed"
+            echo "Sonar Cloud Quality Gate passed"
           fi
