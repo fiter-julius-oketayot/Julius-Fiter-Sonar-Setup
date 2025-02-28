@@ -1,5 +1,13 @@
 name: SonarCloud Analysis
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - continous_hacking
+      - fiter/entreamigos/dev
+      - continuous-hacking
+      - '*'
 jobs:
   sonarQube:
     name: SonarCloud Analysis
@@ -9,6 +17,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Fetch all branches
+        run: git fetch --all
 
       - name: Set up JDK
         uses: actions/setup-java@v1
@@ -35,5 +45,9 @@ jobs:
           ENTRE_AMIGOS_SONAR_PROJECT_KEY: ${{ secrets.ENTRE_AMIGOS_SONAR_PROJECT_KEY }}
           ENTRE_AMIGOS_SONAR_ORGANIZATION_KEY: ${{ secrets.ENTRE_AMIGOS_SONAR_ORGANIZATION_KEY }}
         run: |
-          ./gradlew build
-          ./gradlew --no-daemon --console=plain -Dsonar.verbose=true -Dsonar.login=e7a03c8d35a24d4135eb0c3b36ac4d356e7a7d3d -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=entre-amigos-sas -Dsonar.projectKey=fineract-backend -Dsonar.qualitygate.wait=true --info --stacktrace sonarqube
+          ./gradlew clean build sonar \
+          -Dsonar.host.url=$ENTRE_AMIGOS_SONAR_HOST_URL  \
+          -Dsonar.token=$ENTRE_AMIGOS_SONAR_TOKEN \
+          -Dsonar.projectKey=$ENTRE_AMIGOS_SONAR_PROJECT_KEY \
+          -Dsonar.organization=$ENTRE_AMIGOS_SONAR_ORGANIZATION_KEY \
+          -Dsonar.qualitygate.wait=true --info --stacktrace --scan
