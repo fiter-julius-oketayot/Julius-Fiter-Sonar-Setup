@@ -1,0 +1,57 @@
+name: SonarCloud Analysis
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  sonarQube:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build and analyze with SonarCloud
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./gradlew clean build sonarqube \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+          -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+          -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+          -Dsonar.pullrequest.base=${{ github.base_ref }}
+
+      - name: Check SonarCloud Quality Gate
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          task_id=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/ce/task?id=$(grep -oP '(?<=ceTaskId=)[^ ]+' build.log)" | jq -r .task.id)
+          status=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?analysisId=$task_id" | jq -r .projectStatus.status)
+          if [ "$status" != "OK" ]; then
+            echo "SonarCloud Quality Gate failed"
+            reportUrl="https://sonarcloud.io/dashboard?id=your_project_key"
+            echo "View the SonarCloud report at: $reportUrl"
+            exit 1
+          else
+            echo "SonarCloud Quality Gate passed"
+          fi
