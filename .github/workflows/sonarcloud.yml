@@ -1,10 +1,5 @@
 name: SonarCloud Analysis
-
-on:
-  pull_request:
-    branches:
-      - main
-
+on: [push]
 jobs:
   sonarQube:
     name: SonarCloud Analysis
@@ -12,11 +7,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v1
         with:
-          java-version: '11'
+          java-version: '17'
 
       - name: Cache Gradle packages
         uses: actions/cache@v2
@@ -33,25 +30,10 @@ jobs:
 
       - name: Build and analyze with SonarCloud
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          ENTRE_AMIGOS_SONAR_HOST_URL: ${{ secrets.ENTRE_AMIGOS_SONAR_HOST_URL }}
+          ENTRE_AMIGOS_SONAR_TOKEN: ${{ secrets.ENTRE_AMIGOS_SONAR_TOKEN }}
+          ENTRE_AMIGOS_SONAR_PROJECT_KEY: ${{ secrets.ENTRE_AMIGOS_SONAR_PROJECT_KEY }}
+          ENTRE_AMIGOS_SONAR_ORGANIZATION_KEY: ${{ secrets.ENTRE_AMIGOS_SONAR_ORGANIZATION_KEY }}
         run: |
-          ./gradlew clean build sonarqube \
-          -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-          -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-          -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-          -Dsonar.pullrequest.base=${{ github.base_ref }}
-
-      - name: Check SonarCloud Quality Gate
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          task_id=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/ce/task?id=$(grep -oP '(?<=ceTaskId=)[^ ]+' build.log)" | jq -r .task.id)
-          status=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?analysisId=$task_id" | jq -r .projectStatus.status)
-          if [ "$status" != "OK" ]; then
-            echo "Sonar Cloud Quality Gate failed"
-            reportUrl="https://sonarcloud.io/dashboard?id=your_project_key"
-            echo "View the SonarCloud report at: $reportUrl"
-            exit 1
-          else
-            echo "Sonar Cloud Quality Gate passed"
-          fi
+          ./gradlew build
+          ./gradlew --no-daemon --console=plain -Dsonar.verbose=true -Dsonar.login=e7a03c8d35a24d4135eb0c3b36ac4d356e7a7d3d -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=entre-amigos-sas -Dsonar.projectKey=fineract-backend -Dsonar.qualitygate.wait=true --info --stacktrace sonarqube
